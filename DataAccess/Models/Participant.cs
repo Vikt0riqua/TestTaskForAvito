@@ -13,6 +13,6 @@ namespace DataAccess.Models
         [Required]
         public string Email { get; set; }
 
-        public List<MeetingParticipant> MeetingParticipants { get; set; }
+        public ICollection<MeetingParticipant> MeetingParticipants { get; set; }
     }
 }

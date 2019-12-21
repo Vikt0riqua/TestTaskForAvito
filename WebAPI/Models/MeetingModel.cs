@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json.Converters;
 
 namespace WebAPI.Models
 {
@@ -8,7 +10,7 @@ namespace WebAPI.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public DateTime StartDateTime { get; set; }
-        public TimeSpan Duration { get; set; }
+        public DateTime EndDateTime { get; set; }
         public List<ParticipantModel> MeetingParticipants { get; set; }
     }
 }

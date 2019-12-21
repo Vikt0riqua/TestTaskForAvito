@@ -13,8 +13,9 @@ namespace DataAccess.Models
         public string Name { get; set; }
         [Required]
         public DateTime StartDateTime { get; set; }
-        public TimeSpan Duration { get; set; }
+        [Required]
+        public DateTime EndDateTime { get; set; }
 
-        public List<MeetingParticipant> MeetingParticipants { get; set; }
+        public ICollection<MeetingParticipant> MeetingParticipants { get; set; }
     }
 }

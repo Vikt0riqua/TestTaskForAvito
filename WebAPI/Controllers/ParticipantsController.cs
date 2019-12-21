@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessLogic.Services;
@@ -24,6 +25,13 @@ namespace WebAPI.Controllers
         {
             var allParticipants = await _participantService.Get();
             return allParticipants.Select(participant => new ParticipantModel() { Id = participant.ParticipantId, Name = participant.Name, Email = participant.Email }).ToList();
+        }
+        // GET: Participants/id
+        [HttpGet]
+        [Route("{id}")]
+        public ActionResult<DateTime> GetDate(int id)
+        {
+            return DateTime.Now;
         }
 
         // POST:Participants

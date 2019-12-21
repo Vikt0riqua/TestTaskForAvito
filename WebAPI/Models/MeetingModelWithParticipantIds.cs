@@ -3,12 +3,8 @@ using System.Collections.Generic;
 
 namespace WebAPI.Models
 {
-    public class MeetingModelWithParticipantIds
+    public class MeetingModelWithParticipantIds : MeetingModel
     {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public DateTime StartDateTime { get; set; }
-            public TimeSpan Duration { get; set; }
-            public List<int> MeetingParticipantsId { get; set; }
+        public List<int> MeetingParticipantsId { get; set; }
     }
 }

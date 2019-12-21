@@ -33,13 +33,14 @@ namespace BusinessLogic.Services
         {
             var meeting = _meetingParticipantRepository.GetMeeting(meetingId);
             if (meeting == null) return null;
-            var participantIdInMeeting = meeting.MeetingParticipants.Select(x => x.ParticipantId);
-            foreach (var partId in participantsId.Except(participantIdInMeeting))
+            var participantsIdInMeeting = meeting.MeetingParticipants?.Select(x => x.ParticipantId);
+            if (participantsIdInMeeting != null) participantsId = participantsId.Except(participantsIdInMeeting).ToList();
+            foreach (var partId in participantsId)
             {
                 bool freeTime = _meetingParticipantRepository.CheckParticipantTime(partId, meeting);
                 if (!freeTime) continue;
                 meeting = await _meetingParticipantRepository.AddParticipantForMeeting(meeting, partId);
-                SendEmailToParticipant(_meetingParticipantRepository.GetParticipant(partId).Email, meeting);
+                //SendEmailToParticipant(_meetingParticipantRepository.GetParticipant(partId).Email, meeting);
             }
             return meeting;
         }

@@ -58,6 +58,7 @@ namespace DataAccess.Repositories
         public async Task<Meeting> AddParticipantForMeeting(Meeting meeting, int participantId)
         {
             var meetingParticipant = new MeetingParticipant() { MeetingId = meeting.MeetingId, ParticipantId = participantId };
+            if(meeting.MeetingParticipants == null) meeting.MeetingParticipants = new List<MeetingParticipant>();
             meeting.MeetingParticipants.Add(meetingParticipant);
             _db.Meetings.Update(meeting);
             await _db.SaveChangesAsync();
