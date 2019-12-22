@@ -21,7 +21,6 @@
 - удаление участника с встречи DELETE https://localhost:XXXXX/Meetings/meetingId/Participants/participantId
 
 *Не реализованно:-За 15 минут до встречи отправить напоминание
-                 -Проверка занято/свободно время участников (выдавать предупреждение)
 
 *Для работы с базой данных необходимо поменять строчку "ConnectionStrings": "DefaultConnection" в файле appsettings.json
 *Для отправки сообщений необходимо настроить MessageService и раскомментировать строчку 45 в файле MeetingService.cs
