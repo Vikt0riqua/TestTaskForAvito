@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessLogic.Services;
@@ -28,62 +29,98 @@ namespace WebAPI.Controllers
 
         // POST: Meetings
         [HttpPost]
-        public async Task<ActionResult<MeetingModel>> Post(MeetingModelWithParticipantIds meetingModel)
+        public async Task<ActionResult<MeetingModelForResponse>> Post(MeetingModelWithParticipantIds meetingModel)
         {
             if (meetingModel == null)
             {
-                return BadRequest();
+                return Ok("Вы не задали параметры для встречи");
             }
             var meeting = new Meeting()
             {
-                Name = meetingModel.Name,
+                MeetingName = meetingModel.Name,
                 StartDateTime = meetingModel.StartDateTime,
                 EndDateTime = meetingModel.EndDateTime
             };
-            meeting = await _meetingService.AddMeeting(meeting, meetingModel.MeetingParticipantsId);
-            return Ok(CreateMeetingModel(meeting));
+            try
+            {
+                var (meetingResult, errorList) = await _meetingService.AddMeeting(meeting, meetingModel.MeetingParticipantsId);
+                return Ok(new MeetingModelForResponse { Meeting = CreateMeetingModel(meetingResult), Errors = errorList });
+            }
+            catch (Exception e)
+            {
+                return Ok(e.Message);
+            }
         }
 
         // DELETE:Meetings/5
         [HttpDelete]
         [Route("{id}")]
-        public async Task<ActionResult<MeetingModel>> Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
-            var res = await _meetingService.DeleteMeeting(id);
-            if (res == int.MinValue)
+            try
             {
-                return BadRequest();
+                await _meetingService.DeleteMeeting(id);
+                return Ok("Встреча удалена");
             }
-            return Ok(res);
+            catch (Exception e)
+            {
+                return Ok(e.Message);
+            }
         }
 
         // POST: Meetings/5/Participants
         [HttpPost]
         [Route("{id}/Participants")]
-        public async Task<ActionResult<MeetingModel>> PostParticipants(int id, [FromBody] MeetingParticipants meetingParticipants)
+        public async Task<ActionResult<MeetingModelForResponse>> PostParticipants(int id, [FromBody] MeetingParticipants meetingParticipants)
         {
-            if (meetingParticipants.MeetingParticipantsId == null || !meetingParticipants.MeetingParticipantsId.Any()) return BadRequest();
-            var res = await _meetingService.AddParticipantsForMeeting(id, meetingParticipants.MeetingParticipantsId);
-            return Ok(CreateMeetingModel(res));
+            if (meetingParticipants.MeetingParticipantsId == null || !meetingParticipants.MeetingParticipantsId.Any()) return Ok("Вы не указали участников для добавления.");
+            try
+            {
+                var (meeting, errorList) = await _meetingService.AddParticipantsForMeeting(id, meetingParticipants.MeetingParticipantsId);
+                return Ok(new MeetingModelForResponse { Meeting = CreateMeetingModel(meeting), Errors = errorList });
+            }
+            catch (Exception e)
+            {
+                return Ok(e.Message);
+            }
         }
 
         // DELETE:Meetings/5/Participant/1
         [HttpDelete]
         [Route("{meetingId}/Participants/{participantId}")]
-        public async Task<ActionResult<MeetingModel>> DeleteParticipant(int meetingId, int participantId)
+        public async Task<ActionResult> DeleteParticipant(int meetingId, int participantId)
         {
-            var res = await _meetingService.DeleteParticipantFromMeeting(meetingId, participantId);
-            return Ok(CreateMeetingModel(res));
+            try
+            {
+                await _meetingService.DeleteParticipantFromMeeting(meetingId, participantId);
+                return Ok("Участник удален из митинга");
+            }
+            catch (Exception e)
+            {
+                return Ok(e.Message);
+            }
         }
 
         private static MeetingModel CreateMeetingModel(Meeting meeting)
         {
-            var participantModelsList = meeting.MeetingParticipants?.Select(meetingParticipant => new ParticipantModel() { Name = meetingParticipant.Participant.Name, Email = meetingParticipant.Participant.Email }).ToList();
-
+            var participantModelsList = new List<ParticipantModel>();
+            if (meeting.MeetingParticipants != null)
+            {
+                foreach (var participant in meeting.MeetingParticipants)
+                {
+                    if (participant.Participant == null) continue;
+                    participantModelsList.Add(new ParticipantModel()
+                    {
+                        Id = participant.PId,
+                        Name = participant.Participant.ParticipantName,
+                        Email = participant.Participant.Email
+                    });
+                }
+            }
             var meetingModel = new MeetingModel()
             {
                 Id = meeting.MeetingId,
-                Name = meeting.Name,
+                Name = meeting.MeetingName,
                 StartDateTime = meeting.StartDateTime,
                 EndDateTime = meeting.EndDateTime,
                 MeetingParticipants = participantModelsList

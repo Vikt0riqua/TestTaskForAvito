@@ -24,14 +24,7 @@ namespace WebAPI.Controllers
         public async Task<ActionResult<List<ParticipantModel>>> Get()
         {
             var allParticipants = await _participantService.Get();
-            return allParticipants.Select(participant => new ParticipantModel() { Id = participant.ParticipantId, Name = participant.Name, Email = participant.Email }).ToList();
-        }
-        // GET: Participants/id
-        [HttpGet]
-        [Route("{id}")]
-        public ActionResult<DateTime> GetDate(int id)
-        {
-            return DateTime.Now;
+            return allParticipants.Select(participant => new ParticipantModel() { Id = participant.ParticipantId, Name = participant.ParticipantName, Email = participant.Email }).ToList();
         }
 
         // POST:Participants
@@ -40,10 +33,17 @@ namespace WebAPI.Controllers
         {
             if (participantModel == null)
             {
-                return BadRequest();
+                return Ok("Вы не задали параметры для участника");
             }
-            var participant = await _participantService.AddParticipant(new Participant() { Name = participantModel.Name, Email = participantModel.Email });
-            return Ok(participant);
+            try
+            {
+                var participant = await _participantService.AddParticipant(new Participant() { ParticipantName = participantModel.Name, Email = participantModel.Email });
+                return Ok(new ParticipantModel() { Id = participant.ParticipantId, Name = participant.ParticipantName, Email = participant.Email });
+            }
+            catch (Exception e)
+            {
+                return Ok(e.Message);
+            }
         }
     }
 }

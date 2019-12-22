@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DataAccess.Contexts;
@@ -23,40 +24,70 @@ namespace BusinessLogic.Services
             return await _meetingParticipantRepository.GetAllMeetings();
         }
 
-        public async Task<Meeting> AddMeeting(Meeting meeting, List<int> participantsId)
+        public async Task<(Meeting, List<string>)> AddMeeting(Meeting meeting, List<int> participantsId)
         {
-            var meetingResult = await _meetingParticipantRepository.AddMeeting(meeting);
-            if (meetingResult == null) return null;
-            return await AddParticipantsForMeeting(meeting.MeetingId, participantsId);
+            meeting = await _meetingParticipantRepository.AddMeeting(meeting);
+            var result = await AddParticipantsForMeeting(meeting.MeetingId, participantsId);
+            return result;
         }
-        public async Task<Meeting> AddParticipantsForMeeting(int meetingId, List<int> participantsId)
+        public async Task<(Meeting, List<string>)> AddParticipantsForMeeting(int meetingId, List<int> participantsId)
         {
             var meeting = _meetingParticipantRepository.GetMeeting(meetingId);
-            if (meeting == null) return null;
-            var participantsIdInMeeting = meeting.MeetingParticipants?.Select(x => x.ParticipantId);
+            if (meeting == null) throw new Exception("Встреча с данным id не найдена");
+            var participantsIdInMeeting = meeting.MeetingParticipants?.Select(x => x.PId);
             if (participantsIdInMeeting != null) participantsId = participantsId.Except(participantsIdInMeeting).ToList();
-            foreach (var partId in participantsId)
+            List<string> errors = new List<string>();
+            foreach (var participantId in participantsId)
             {
-                bool freeTime = _meetingParticipantRepository.CheckParticipantTime(partId, meeting);
-                if (!freeTime) continue;
-                meeting = await _meetingParticipantRepository.AddParticipantForMeeting(meeting, partId);
-                //SendEmailToParticipant(_meetingParticipantRepository.GetParticipant(partId).Email, meeting);
+                var res = await TryAddParticipant(meeting, participantId);
+                if(res != null) errors.Add(res); 
             }
-            return meeting;
+            meeting = _meetingParticipantRepository.GetMeeting(meetingId);
+            return (meeting, errors);
         }
 
-        public async Task<int> DeleteMeeting(int id)
+        private async Task<string> TryAddParticipant(Meeting meeting, int participantId)
         {
-            return await _meetingParticipantRepository.DeleteMeeting(id);
+            try
+            {
+                await AddParticipantForMeeting(meeting, participantId);
+                return null;
+            }
+            catch (Exception e)
+            {
+                return e.Message;
+            }
         }
-        public async Task<Meeting> DeleteParticipantFromMeeting(int meetingId, int participantId)
+        private async Task AddParticipantForMeeting(Meeting meeting, int participantId)
         {
-            return await _meetingParticipantRepository.DeleteParticipantFromMeeting(meetingId, participantId);
+            var participant = _meetingParticipantRepository.GetParticipant(participantId);
+            if (participant == null) { throw new Exception("Участник с id = " + participantId + " не найден"); }
+            if (!_meetingParticipantRepository.CheckParticipantTime(participant, meeting))
+            {
+                throw new Exception("Участник с id = " + participantId + " занят на данное время");
+            }
+            await _meetingParticipantRepository.AddParticipantForMeeting(meeting, participant);
+            SendEmailToParticipant(participant, meeting);
+        }
+        public Task DeleteMeeting(int id)
+        {
+            return _meetingParticipantRepository.DeleteMeeting(id);
+        }
+        public Task DeleteParticipantFromMeeting(int meetingId, int participantId)
+        {
+            return _meetingParticipantRepository.DeleteParticipantFromMeeting(meetingId, participantId);
         }
 
-        private void SendEmailToParticipant(string email, Meeting meeting)
+        private void SendEmailToParticipant(Participant participant, Meeting meeting)
         {
-            _messageService.SendEmail(email, meeting.Name, meeting.StartDateTime);
+            try
+            {
+                _messageService.SendEmail(participant.Email, meeting.MeetingName, meeting.StartDateTime);
+            }
+            catch (Exception)
+            {
+                throw new Exception("Сообщение для участника с id = " + participant.ParticipantId + " не отправлено");
+            }
         }
     }
 }

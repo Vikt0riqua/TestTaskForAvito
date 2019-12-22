@@ -10,12 +10,17 @@ namespace DataAccess.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int MeetingId { get; set; }
         [Required]
-        public string Name { get; set; }
+        public string MeetingName { get; set; }
         [Required]
         public DateTime StartDateTime { get; set; }
         [Required]
         public DateTime EndDateTime { get; set; }
 
-        public ICollection<MeetingParticipant> MeetingParticipants { get; set; }
+        public IList<MeetingParticipant> MeetingParticipants { get; set; }
+
+        public Meeting()
+        {
+            MeetingParticipants = new List<MeetingParticipant>();
+        }
     }
 }

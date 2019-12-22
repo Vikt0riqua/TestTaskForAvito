@@ -9,10 +9,15 @@ namespace DataAccess.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ParticipantId { get; set; }
         [Required]
-        public string Name { get; set; }
+        public string ParticipantName { get; set; }
         [Required]
         public string Email { get; set; }
 
-        public ICollection<MeetingParticipant> MeetingParticipants { get; set; }
+        public IList<MeetingParticipant> MeetingParticipants { get; set; }
+
+        public Participant()
+        {
+            MeetingParticipants = new List<MeetingParticipant>();
+        }
     }
 }

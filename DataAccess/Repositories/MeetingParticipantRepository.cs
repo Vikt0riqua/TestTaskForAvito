@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DataAccess.Contexts;
@@ -16,70 +17,86 @@ namespace DataAccess.Repositories
         }
         public async Task<List<Participant>> GetAllParticipants()
         {
-            return await _db.Participants.ToListAsync();
+            return await _db.Participants.Include(m => m.MeetingParticipants).ThenInclude(mp => mp.Meeting).ToListAsync();
         }
         public Participant GetParticipant(int id)
         {
-            return _db.Participants.FirstOrDefault(x => x.ParticipantId == id);
+            return _db.Participants.Include(m => m.MeetingParticipants).ThenInclude(mp => mp.Meeting).FirstOrDefault(x => x.ParticipantId == id);
         }
         public async Task<Participant> AddParticipant(Participant participant)
         {
             _db.Participants.Add(participant);
-            await _db.SaveChangesAsync();
+            var success = await _db.SaveChangesAsync() == 1;
+            if (!success)
+            {
+                throw new Exception("Произошла ошибка при добавление участника в базу");
+            }
             return participant;
         }
 
         public async Task<List<Meeting>> GetAllMeetings()
         {
-            return await _db.Meetings.ToListAsync();
+            return await _db.Meetings.Include(m => m.MeetingParticipants).ThenInclude(mp => mp.Participant).ToListAsync();
         }
         public Meeting GetMeeting(int id)
         {
-            return _db.Meetings.FirstOrDefault(x => x.MeetingId == id);
+            return _db.Meetings.Include(m => m.MeetingParticipants).ThenInclude(mp => mp.Participant).FirstOrDefault(x => x.MeetingId == id);
         }
 
         public async Task<Meeting> AddMeeting(Meeting meeting)
         {
             _db.Meetings.Add(meeting);
-            await _db.SaveChangesAsync();
+            var success = await _db.SaveChangesAsync() == 1;
+            if (!success)
+            {
+                throw new Exception("Произошла ошибка при добавление встречи");
+            }
             return meeting;
         }
 
-        public async Task<int> DeleteMeeting(int id)
+        public async Task DeleteMeeting(int id)
         {
             var meeting = _db.Meetings.FirstOrDefault(x => x.MeetingId == id);
             if (meeting == null)
             {
-                return int.MinValue;
+                throw new Exception("Встреча с данным id не найдена");
             }
             _db.Meetings.Remove(meeting);
-            return await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
         }
-        public async Task<Meeting> AddParticipantForMeeting(Meeting meeting, int participantId)
+        public async Task<Meeting> AddParticipantForMeeting(Meeting meeting, Participant participant)
         {
-            var meetingParticipant = new MeetingParticipant() { MeetingId = meeting.MeetingId, ParticipantId = participantId };
-            if(meeting.MeetingParticipants == null) meeting.MeetingParticipants = new List<MeetingParticipant>();
+            var meetingParticipant = new MeetingParticipant() { MId = meeting.MeetingId, PId = participant.ParticipantId, Participant = participant };
             meeting.MeetingParticipants.Add(meetingParticipant);
             _db.Meetings.Update(meeting);
-            await _db.SaveChangesAsync();
+            var success = await _db.SaveChangesAsync() == 2;
+            if (!success)
+            {
+                throw new Exception("Произошла ошибка при добавление участника с id = " + participant.ParticipantId);
+            }
             return meeting;
         }
 
-        public async Task<Meeting> DeleteParticipantFromMeeting(int meetingId, int participantId)
+        public async Task DeleteParticipantFromMeeting(int meetingId, int participantId)
         {
-            var meeting = _db.Meetings.FirstOrDefault(x => x.MeetingId == meetingId);
-            var meetingParticipant = meeting?.MeetingParticipants.FirstOrDefault(x => x.ParticipantId == participantId);
-            if (meetingParticipant == null) return meeting;
+            var meeting = _db.Meetings.Include(m => m.MeetingParticipants).ThenInclude(mp => mp.Participant).FirstOrDefault(x => x.MeetingId == meetingId);
+            if(meeting == null) throw new Exception("Вчтреча с данным id не найдена");
+            var meetingParticipant = meeting.MeetingParticipants.FirstOrDefault(x => x.PId == participantId);
+            if (meetingParticipant == null) throw new Exception("Человек не является участником данной встречи");
             meeting.MeetingParticipants.Remove(meetingParticipant);
-            await _db.SaveChangesAsync();
-            return meeting;
+            var success = await _db.SaveChangesAsync() == 1;
+            if (!success)
+            {
+                throw new Exception("Произошла ошибка при удалении участника со встречи");
+            }
         }
 
-        public bool CheckParticipantTime(int participantId, Meeting meeting)
+        public bool CheckParticipantTime(Participant participant, Meeting meeting)
         {
-            bool result = true;
-            //проверка времени пользователя
-            return result;
+            var meetings = participant.MeetingParticipants?.Select(mp => new { mp.Meeting.StartDateTime, mp.Meeting.EndDateTime});
+            if (meetings == null) return true;
+            var haveMeeting = meetings.Any(m => m.StartDateTime <= meeting.EndDateTime && m.EndDateTime >= meeting.StartDateTime);
+            return !haveMeeting;
         }
     }
 }

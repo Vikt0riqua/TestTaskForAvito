@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DataAccess.Models;
@@ -20,7 +21,7 @@ namespace BusinessLogic.Services
 
         public async Task<Participant> AddParticipant(Participant participant)
         {
-            if (!IsValidEmail(participant.Email)) return null;
+            if (!IsValidEmail(participant.Email)) throw new Exception("Email задан не верно");
             participant = await _meetingParticipantRepository.AddParticipant(participant);
             return participant;
         }

@@ -16,21 +16,19 @@ namespace DataAccess.Contexts
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<MeetingParticipant>()
-                .HasKey(t => new { t.MeetingId, t.ParticipantId });
+            modelBuilder.Entity<Meeting>().HasIndex(u => new { Name = u.MeetingName, u.StartDateTime }).IsUnique();
+            modelBuilder.Entity<Participant>().HasIndex(u => new { Name = u.ParticipantName, u.Email }).IsUnique();
+            modelBuilder.Entity<MeetingParticipant>().HasKey(t => new { t.MId, t.PId });
 
             modelBuilder.Entity<MeetingParticipant>()
-                .HasOne(pt => pt.Meeting)
+                .HasOne<Meeting>(mp => mp.Meeting)
+                .WithMany(m => m.MeetingParticipants)
+                .HasForeignKey(mp => mp.MId);
+
+            modelBuilder.Entity<MeetingParticipant>()
+                .HasOne<Participant>(mp => mp.Participant)
                 .WithMany(p => p.MeetingParticipants)
-                .HasForeignKey(pt => pt.MeetingId);
-
-            modelBuilder.Entity<MeetingParticipant>()
-                .HasOne(pt => pt.Participant)
-                .WithMany(t => t.MeetingParticipants)
-                .HasForeignKey(pt => pt.ParticipantId);
-
-            modelBuilder.Entity<Meeting>().HasIndex(u => new {u.Name, u.StartDateTime}).IsUnique();
-            modelBuilder.Entity<Participant>().HasIndex(u => new { u.Name, u.Email}).IsUnique();
+                .HasForeignKey(mp => mp.PId);
         }
     }
 }
